@@ -4,6 +4,7 @@ import {
   Home,
   Image,
   Key,
+  Palette,
   Settings,
   Terminal,
 } from "lucide-react"
@@ -30,6 +31,11 @@ const itemGroups = [
         title: "Chuyển đổi định dạng",
         url: "/image-converter",
         icon: Image,
+      },
+      {
+        title: "Chuyển đổi màu sắc",
+        url: "/color-converter",
+        icon: Palette,
       },
     ],
   },
