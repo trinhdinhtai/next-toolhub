@@ -1,5 +1,13 @@
 import Link from "next/link"
-import { ArrowRight, Code, FileType, Image, Key, Terminal } from "lucide-react"
+import {
+  ArrowRight,
+  Code,
+  FileType,
+  Image,
+  Key,
+  Shuffle,
+  Terminal,
+} from "lucide-react"
 
 const tools = [
   {
@@ -31,6 +39,12 @@ const tools = [
     description: "Test and debug regular expressions",
     icon: <Terminal className="h-6 w-6" />,
     link: "/tools/regex-checker",
+  },
+  {
+    title: "Random Generator",
+    description: "Tạo các giá trị ngẫu nhiên như số, văn bản, UUID và màu sắc",
+    icon: <Shuffle className="h-6 w-6" />,
+    link: "/tools/random-generator",
   },
 ]
 

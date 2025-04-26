@@ -7,6 +7,7 @@ import {
   Key,
   Palette,
   Settings,
+  Shuffle,
   Terminal,
   Timer,
 } from "lucide-react"
@@ -53,6 +54,11 @@ const itemGroups = [
         title: "Pomodoro Timer",
         url: "/pomodoro",
         icon: Timer,
+      },
+      {
+        title: "Random Generator",
+        url: "/tools/random-generator",
+        icon: Shuffle,
       },
     ],
   },
