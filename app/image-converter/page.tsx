@@ -4,7 +4,20 @@ import { useCallback, useEffect, useState } from "react"
 import { Download, Image as ImageIcon, UploadCloud, X } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
 type SupportedFormat = "jpeg" | "png" | "webp" | "bmp" | "gif"
+type ResizeOption = "original" | "small" | "medium" | "large" | "custom"
+type FilterOption = "none" | "grayscale" | "sepia" | "invert" | "blur"
 
 interface ImageFile {
   file: File
@@ -20,6 +33,14 @@ export default function ImageConverter() {
   const [targetFormat, setTargetFormat] = useState<SupportedFormat>("webp")
   const [isConverting, setIsConverting] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Advanced options
+  const [quality, setQuality] = useState<number>(90)
+  const [resizeOption, setResizeOption] = useState<ResizeOption>("original")
+  const [customWidth, setCustomWidth] = useState<number>(800)
+  const [customHeight, setCustomHeight] = useState<number>(600)
+  const [maintainAspectRatio, setMaintainAspectRatio] = useState<boolean>(true)
+  const [filterOption, setFilterOption] = useState<FilterOption>("none")
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
@@ -71,6 +92,129 @@ export default function ImageConverter() {
     }
   }, [imageFile, convertedImage])
 
+  const applyFilter = (
+    ctx: CanvasRenderingContext2D,
+    filter: FilterOption,
+    width: number,
+    height: number
+  ) => {
+    if (filter === "none") return
+
+    const imageData = ctx.getImageData(0, 0, width, height)
+    const data = imageData.data
+
+    switch (filter) {
+      case "grayscale":
+        for (let i = 0; i < data.length; i += 4) {
+          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3
+          data[i] = avg // R
+          data[i + 1] = avg // G
+          data[i + 2] = avg // B
+        }
+        break
+      case "sepia":
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i]
+          const g = data[i + 1]
+          const b = data[i + 2]
+          data[i] = Math.min(255, r * 0.393 + g * 0.769 + b * 0.189)
+          data[i + 1] = Math.min(255, r * 0.349 + g * 0.686 + b * 0.168)
+          data[i + 2] = Math.min(255, r * 0.272 + g * 0.534 + b * 0.131)
+        }
+        break
+      case "invert":
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 255 - data[i] // R
+          data[i + 1] = 255 - data[i + 1] // G
+          data[i + 2] = 255 - data[i + 2] // B
+        }
+        break
+      case "blur":
+        // Apply a simple blur effect (this is a very basic implementation)
+        ctx.filter = "blur(5px)"
+        ctx.drawImage(new Image(), 0, 0, width, height)
+        ctx.filter = "none"
+        return // Return early since we redrew the image
+    }
+
+    ctx.putImageData(imageData, 0, 0)
+  }
+
+  const calculateDimensions = (
+    originalWidth: number,
+    originalHeight: number
+  ) => {
+    if (resizeOption === "original") {
+      return { width: originalWidth, height: originalHeight }
+    }
+
+    if (resizeOption === "custom") {
+      if (maintainAspectRatio) {
+        const ratio = originalWidth / originalHeight
+        if (customWidth > 0 && customHeight > 0) {
+          // Determine which dimension to use as the constraint
+          if (customWidth / customHeight > ratio) {
+            return {
+              width: Math.round(customHeight * ratio),
+              height: customHeight,
+            }
+          } else {
+            return {
+              width: customWidth,
+              height: Math.round(customWidth / ratio),
+            }
+          }
+        } else if (customWidth > 0) {
+          return { width: customWidth, height: Math.round(customWidth / ratio) }
+        } else if (customHeight > 0) {
+          return {
+            width: Math.round(customHeight * ratio),
+            height: customHeight,
+          }
+        }
+      } else {
+        return {
+          width: customWidth || originalWidth,
+          height: customHeight || originalHeight,
+        }
+      }
+    }
+
+    // Predefined sizes
+    const sizes = {
+      small: { maxWidth: 640, maxHeight: 480 },
+      medium: { maxWidth: 1280, maxHeight: 720 },
+      large: { maxWidth: 1920, maxHeight: 1080 },
+    }
+
+    // Make sure we're only using predefined sizes here
+    const sizeOption = resizeOption as "small" | "medium" | "large"
+    const selected = sizes[sizeOption]
+    const ratio = originalWidth / originalHeight
+
+    if (
+      originalWidth <= selected.maxWidth &&
+      originalHeight <= selected.maxHeight
+    ) {
+      return { width: originalWidth, height: originalHeight }
+    }
+
+    if (
+      originalWidth / selected.maxWidth >
+      originalHeight / selected.maxHeight
+    ) {
+      return {
+        width: selected.maxWidth,
+        height: Math.round(selected.maxWidth / ratio),
+      }
+    } else {
+      return {
+        width: Math.round(selected.maxHeight * ratio),
+        height: selected.maxHeight,
+      }
+    }
+  }
+
   const convertImage = async () => {
     if (!imageFile) return
 
@@ -87,22 +231,28 @@ export default function ImageConverter() {
         img.onerror = reject
       })
 
+      const { width, height } = calculateDimensions(img.width, img.height)
+
       const canvas = document.createElement("canvas")
-      canvas.width = img.width
-      canvas.height = img.height
+      canvas.width = width
+      canvas.height = height
       const ctx = canvas.getContext("2d")
 
       if (!ctx) {
         throw new Error("Không thể tạo context canvas")
       }
 
-      ctx.drawImage(img, 0, 0)
+      // Draw the image with the new dimensions
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Apply selected filter
+      applyFilter(ctx, filterOption, width, height)
 
       // Convert to the selected format
       const mimeType = `image/${targetFormat}`
-      const quality = targetFormat === "jpeg" ? 0.9 : 1 // JPEG uses quality
+      const conversionQuality = targetFormat === "jpeg" ? quality / 100 : 1 // JPEG uses quality
 
-      const dataUrl = canvas.toDataURL(mimeType, quality)
+      const dataUrl = canvas.toDataURL(mimeType, conversionQuality)
       setConvertedImage(dataUrl)
     } catch (err) {
       console.error(err)
@@ -143,6 +293,22 @@ export default function ImageConverter() {
     { value: "gif", label: "GIF" },
   ]
 
+  const resizeOptions: { value: ResizeOption; label: string }[] = [
+    { value: "original", label: "Kích thước gốc" },
+    { value: "small", label: "Nhỏ (640×480)" },
+    { value: "medium", label: "Vừa (1280×720)" },
+    { value: "large", label: "Lớn (1920×1080)" },
+    { value: "custom", label: "Tùy chỉnh" },
+  ]
+
+  const filterOptions: { value: FilterOption; label: string }[] = [
+    { value: "none", label: "Không" },
+    { value: "grayscale", label: "Trắng đen" },
+    { value: "sepia", label: "Sepia" },
+    { value: "invert", label: "Âm bản" },
+    { value: "blur", label: "Làm mờ" },
+  ]
+
   return (
     <div className="container mx-auto py-8">
       <div className="mx-auto max-w-5xl">
@@ -157,11 +323,12 @@ export default function ImageConverter() {
         {!imageFile ? (
           <div
             {...getRootProps()}
-            className={`cursor-pointer rounded-lg border-2 border-dashed p-12 text-center transition-colors ${
+            className={cn(
+              "cursor-pointer rounded-lg border-2 border-dashed p-12 text-center transition-colors",
               isDragActive
                 ? "border-primary bg-primary/5"
                 : "hover:bg-muted/50 border-gray-300"
-            }`}
+            )}
           >
             <input {...getInputProps()} />
             <UploadCloud className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
@@ -178,13 +345,15 @@ export default function ImageConverter() {
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Ảnh gốc</h2>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={resetImage}
-                className="text-muted-foreground hover:text-foreground flex items-center text-sm"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="mr-1 h-4 w-4" />
                 Xóa
-              </button>
+              </Button>
             </div>
 
             <div className="grid gap-8 md:grid-cols-2">
@@ -220,29 +389,152 @@ export default function ImageConverter() {
                       <label className="mb-1 block text-sm font-medium">
                         Chọn định dạng đầu ra:
                       </label>
-                      <select
+                      <Select
                         value={targetFormat}
-                        onChange={(e) =>
-                          setTargetFormat(e.target.value as SupportedFormat)
+                        onValueChange={(value) =>
+                          setTargetFormat(value as SupportedFormat)
                         }
-                        className="bg-background w-full rounded-md border px-3 py-2"
                         disabled={isConverting}
                       >
-                        {formatOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Chọn định dạng" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {formatOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    <button
+                    {targetFormat === "jpeg" && (
+                      <div>
+                        <label className="mb-1 block text-sm font-medium">
+                          Chất lượng ảnh: {quality}%
+                        </label>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          step="5"
+                          value={quality}
+                          onChange={(e) => setQuality(parseInt(e.target.value))}
+                          className="w-full"
+                          disabled={isConverting}
+                        />
+                        <div className="text-muted-foreground flex justify-between text-xs">
+                          <span>10%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        Kích thước ảnh:
+                      </label>
+                      <Select
+                        value={resizeOption}
+                        onValueChange={(value) =>
+                          setResizeOption(value as ResizeOption)
+                        }
+                        disabled={isConverting}
+                      >
+                        <SelectTrigger className="mb-2 w-full">
+                          <SelectValue placeholder="Chọn kích thước" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {resizeOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {resizeOption === "custom" && (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="mb-1 block text-xs">
+                              Chiều rộng (px):
+                            </label>
+                            <Input
+                              type="number"
+                              value={customWidth}
+                              onChange={(e) =>
+                                setCustomWidth(parseInt(e.target.value) || 0)
+                              }
+                              className="w-full"
+                              disabled={isConverting}
+                              min="1"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs">
+                              Chiều cao (px):
+                            </label>
+                            <Input
+                              type="number"
+                              value={customHeight}
+                              onChange={(e) =>
+                                setCustomHeight(parseInt(e.target.value) || 0)
+                              }
+                              className="w-full"
+                              disabled={isConverting}
+                              min="1"
+                            />
+                          </div>
+                          <div className="col-span-2 mt-1">
+                            <label className="flex items-center text-xs">
+                              <input
+                                type="checkbox"
+                                checked={maintainAspectRatio}
+                                onChange={() =>
+                                  setMaintainAspectRatio(!maintainAspectRatio)
+                                }
+                                className="mr-2 h-3 w-3"
+                                disabled={isConverting}
+                              />
+                              Giữ tỷ lệ khung hình
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        Hiệu ứng:
+                      </label>
+                      <Select
+                        value={filterOption}
+                        onValueChange={(value) =>
+                          setFilterOption(value as FilterOption)
+                        }
+                        disabled={isConverting}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Chọn hiệu ứng" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filterOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
                       onClick={convertImage}
                       disabled={isConverting || !imageFile}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md py-2 font-medium disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full"
                     >
                       {isConverting ? "Đang chuyển đổi..." : "Chuyển đổi ảnh"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -267,13 +559,13 @@ export default function ImageConverter() {
                       />
                     </div>
                     <div className="border-t p-4">
-                      <button
+                      <Button
                         onClick={downloadImage}
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center rounded-md py-2 font-medium"
+                        className="flex w-full items-center justify-center"
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Tải xuống {targetFormat.toUpperCase()}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
