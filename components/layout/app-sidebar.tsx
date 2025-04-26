@@ -1,4 +1,5 @@
 import {
+  Clock,
   Code,
   FileType,
   Home,
@@ -36,6 +37,16 @@ const itemGroups = [
         title: "Chuyển đổi màu sắc",
         url: "/color-converter",
         icon: Palette,
+      },
+    ],
+  },
+  {
+    label: "Tiện ích",
+    items: [
+      {
+        title: "Chuyển đổi ngày giờ",
+        url: "/date-time-converter",
+        icon: Clock,
       },
     ],
   },
