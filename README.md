@@ -1,4 +1,67 @@
-This is a [Next.js](https://nextjs.org/) starter template that includes basic configurations and structure to help you get started quickly. But it's quite opinionated since it used my own configuration presets, so feel free to customize it to your needs.
+# ToolHub - A Collection of Useful Tools
+
+ToolHub is a web application that provides a collection of useful tools for everyday tasks. It's built with Next.js and offers a modern, responsive user interface.
+
+## Tools Included
+
+- **Image Compression**: Compress and optimize images without losing significant quality
+- **File Converter**: Convert files between different formats (TXT, JSON, CSV, YAML)
+- **Password Generator**: Create strong, secure passwords with customizable options
+- **JSON Formatter**: Format, validate and beautify JSON data
+- **RegEx Checker**: Test and debug regular expressions with real-time feedback
+
+## Tech Stack
+
+- **Framework**: Next.js 15+
+- **Styling**: Tailwind CSS
+- **UI Components**: Custom components built with Tailwind
+- **Icons**: Lucide React
+- **Deployment**: Vercel (recommended)
+
+## Getting Started
+
+First, install the dependencies:
+
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+Then, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Project Structure
+
+- `/app`: Contains all the pages and routes
+- `/app/tools/`: Contains individual tool implementations
+- `/components/`: Contains reusable UI components
+- `/public/`: Contains static assets
+
+## Features to Add in the Future
+
+- More conversion options in the File Converter tool
+- Image format conversion
+- Color picker and converter
+- Base64 encoder/decoder
+- Text diff checker
+- URL encoder/decoder
+- Hash generator
+
+## License
+
+This project is licensed under the MIT License.
 
 ## What's Included
 

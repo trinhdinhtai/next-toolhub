@@ -6,6 +6,8 @@ import type { Metadata } from "next"
 
 import { fontSans } from "@/lib/fonts"
 import { cn } from "@/lib/utils"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import AppSidebar from "@/components/layout/app-sidebar"
 import SiteFooter from "@/components/layout/site-footer"
 import SiteHeader from "@/components/layout/site-header"
 import { ThemeProvider } from "@/components/providers/theme-provider"
@@ -34,11 +36,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="bg-background relative flex min-h-screen flex-col">
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-          </div>
+          <SidebarProvider>
+            <AppSidebar />
+            <main className="flex-1 p-4">
+              <SidebarTrigger />
+              {children}
+            </main>
+          </SidebarProvider>
           <TailwindIndicator />
         </ThemeProvider>
       </body>
