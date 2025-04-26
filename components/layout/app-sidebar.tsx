@@ -8,6 +8,7 @@ import {
   Palette,
   Settings,
   Terminal,
+  Timer,
 } from "lucide-react"
 
 import {
@@ -47,6 +48,11 @@ const itemGroups = [
         title: "Chuyển đổi ngày giờ",
         url: "/date-time-converter",
         icon: Clock,
+      },
+      {
+        title: "Pomodoro Timer",
+        url: "/pomodoro",
+        icon: Timer,
       },
     ],
   },
